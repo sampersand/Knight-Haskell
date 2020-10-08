@@ -27,24 +27,29 @@ primary = Null <$ string "null"
       <|> Variable <$> variable
 
 unary :: Parser UnaryFn
-unary = Output <$ (string "O" <|> string "OUTPUT")
+unary = FnDef  <$ (string "F" <|> string "FNDEF")
+    <|> Call   <$ (string "C" <|> string "CALL")
+    <|> Output <$ (string "O" <|> string "OUTPUT")
     <|> Prompt <$ (string "P" <|> string "PROMPT")
-    <|> Quit <$ (string "Q" <|> string "QUIT")
-    <|> Not <$ char '!'
+    <|> Quit   <$ (string "Q" <|> string "QUIT")
+    <|> Eval   <$ (string "E" <|> string "Eval")
+    <|> System <$ (string "S" <|> string "System")
+    <|> Not    <$ char '!'
 
 binary :: Parser BinaryFn
-binary = While <$ (string "W" <|> string "WHILE")
-     <|> Semicolon <$ char ';'
+binary = While  <$ (string "W" <|> string "WHILE")
+     <|> Random <$ (string "R" <|> string "RANDOM")
+     <|> Endl   <$ char ';'
      <|> Assign <$ char '='
-     <|> Add <$ char '+'
-     <|> Sub <$ char '-'
-     <|> Mul <$ char '*'
-     <|> Div <$ char '/'
-     <|> Pow <$ char '^'
-     <|> Lth <$ char '<'
-     <|> Gth <$ char '>'
-     <|> And <$ char '&'
-     <|> Or <$ char '|'
+     <|> Add    <$ char '+'
+     <|> Sub    <$ char '-'
+     <|> Mul    <$ char '*'
+     <|> Div    <$ char '/'
+     <|> Pow    <$ char '^'
+     <|> Lth    <$ char '<'
+     <|> Gth    <$ char '>'
+     <|> And    <$ char '&'
+     <|> Or     <$ char '|'
 
 ternary :: Parser TernaryFn
 ternary = If <$ (string "I" <|> string "IF")

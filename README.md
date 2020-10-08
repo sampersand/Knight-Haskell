@@ -16,14 +16,14 @@ primary
 	| `'` [^']* `'` | `"` [^"]* `"`
 
 unary
-	:= `!`
-	 | `F` | `FNDEF`
+	:= `F` | `FNDEF`
 	 | `C` | `CALL`
-	 | `P` | `PROMPT`
 	 | `O` | `OUTPUT`
+	 | `P` | `PROMPT`
 	 | `Q` | `QUIT`
 	 | `E` | `EVAL`
 	 | `S` | `SYSTEM`
+	 | `!`
 
 binary
 	:= `R` | `RAND`

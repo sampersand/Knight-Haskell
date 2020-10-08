@@ -23,14 +23,21 @@ data Primary
   deriving (Show, Eq)
 
 data UnaryFn
-  = Output
+  = Not
+  | FnDef
+  | Call
+  | Output
   | Prompt
   | Quit
+  | Eval
+  | System
   | Not
   deriving (Show, Eq)
 
 data BinaryFn
-  = While | Semicolon | Assign
+  = Random
+  | While
+  | Endl | Assign
   | Add | Sub | Mul | Div | Mod | Pow
   | Lth | Gth | And | Or
   deriving (Show, Eq)
