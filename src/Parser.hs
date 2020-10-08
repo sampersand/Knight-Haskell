@@ -1,6 +1,6 @@
 module Parser where
 
-import Data.Char (isDigit, isSpace, isUpper, isLower, isAlpha, isAlphaNum)
+import Data.Char (isDigit, isSpace, isLower)
 import Control.Applicative
 import Data.Functor
 
@@ -47,4 +47,4 @@ eol :: Parser ()
 eol = void $ char '\n'
 
 string :: String -> Parser String 
-string s = s <$ foldr (<*) (pure 'a') (char <$> s)
+string = traverse char

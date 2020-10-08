@@ -1,12 +1,5 @@
 module Knight.Types where
 
-import Parser
-import Control.Applicative 
-import Data.Maybe
-import Data.Functor
-import Data.Foldable
-import Data.Char (isDigit, isSpace, isUpper, isLower, isAlphaNum)
-
 data Value
   = Nullary Primary
   | Unary UnaryFn Value
@@ -31,7 +24,6 @@ data UnaryFn
   | Quit
   | Eval
   | System
-  | Not
   deriving (Show, Eq)
 
 data BinaryFn
