@@ -57,8 +57,7 @@ binary = asum
   , named Lth "<"
   , named Gth ">"
   , named And "&"
-  , named Or "|"
-  ]
+  , named Or "|" ]
 
 ternary :: Parser TernaryFn
 ternary = named If "IF"
