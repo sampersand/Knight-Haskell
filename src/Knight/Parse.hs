@@ -17,11 +17,12 @@ text :: Char -> Parser String
 text q = char q *> (many $ satisfy (/= q)) <* char q
 
 -- | Parses a Variable, which should match `[a-z_0-9]+`.
---
--- Note that technically, this function accepts a digit as the beginning char,
--- but `literal` parses Numbers first.
 variable :: Parser String
-variable = some $ asum [lower, digit, char '_']
+variable = do
+  first <- lower <|> char '_'
+  rest <- many $ asum [lower, digit, char '_']
+  pure $ first : rest
+
 
 -- | Parses a Literal value within Quest.
 literal :: Parser Literal
@@ -31,7 +32,6 @@ literal = asum
   , Bool False <$ string "false"
   , Num <$> number
   , Text <$> (text '\'' <|> text '"')
-  , Variable <$> variable
   ]
 
 
@@ -43,13 +43,19 @@ named :: a -> String -> Parser a
 named t text@(c:[]) = t <$ void (char c)
 named t text@(c:_) = t <$ (void (char c) <|> void (string text))
 
+nullary :: Parser NullaryFn
+nullary = asum 
+  [ Variable <$> variable
+  , Literal <$> literal
+  , named Prompt "PROMPT"
+  ]
+
 -- | Parse the unary functions.
 unary :: Parser UnaryFn
 unary = asum
   [ named FnDef "FNDEF"
   , named Call "CALL"
   , named Output "OUTPUT"
-  , named Prompt "PROMPT"
   , named Quit "QUIT"
   , named Eval "Eval"
   , named System "System"
@@ -96,7 +102,7 @@ strip = void $ many $ asum [stripComment, stripWhitespace, stripParens]
 -- | Parses a single `Value`.
 value :: Parser Value
 value = strip *> asum
-  [ Nullary <$> literal
+  [ Nullary <$> nullary
   , Unary   <$> unary <*> value
   , Binary  <$> binary  <*> value <*> value
   , Ternary <$> ternary <*> value <*> value <*> value

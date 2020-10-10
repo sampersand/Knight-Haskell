@@ -5,7 +5,7 @@ module Knight.Types where
 --
 -- Because Knight's entirely expression-based, everything is a Value.
 data Value
-  = Nullary Literal
+  = Nullary NullaryFn
   | Unary UnaryFn Value
   | Binary BinaryFn Value Value
   | Ternary TernaryFn Value Value Value
@@ -19,7 +19,12 @@ data Literal
   | Bool Bool
   | Num Integer
   | Text String
+  deriving (Show, Eq)
+
+data NullaryFn
+  = Literal Literal
   | Variable String
+  | Prompt
   deriving (Show, Eq)
 
 -- | Functions that takes exactly one argument.
@@ -28,7 +33,6 @@ data UnaryFn
   | FnDef
   | Call
   | Output
-  | Prompt
   | Quit
   | Eval
   | System

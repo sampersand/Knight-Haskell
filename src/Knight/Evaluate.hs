@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleInstances, TypeApplications #-}
 
-{- | Parsing Knight `Value`s. -}
 module Knight.Evaluate where
 
 import Knight.Types
@@ -17,49 +16,56 @@ import Data.Functor
 import Data.Map
 import Data.Maybe
 import System.Exit
-import Debug.Trace
 
 class ValueConvertible a where
   into :: a -> Value
   from :: Value -> EvaluatorM a
 
-  -- = <-- fix dumb sublime text formatting
+-- = <-- fix dumb sublime text formatting
 
 instance ValueConvertible Bool where
-  into = Nullary . Bool
+  into = Nullary . Literal . Bool
 
-  from (Nullary (Null)) = pure False
-  from (Nullary (Bool b)) = pure b
-  from (Nullary (Num n)) = pure (n /= 0)
-  from (Nullary (Text t)) = pure (not $ Prelude.null t)
+  from (Nullary (Literal (Null))) = pure False
+  from (Nullary (Literal (Bool b))) = pure b
+  from (Nullary (Literal (Num n))) = pure (n /= 0)
+  from (Nullary (Literal (Text t))) = pure (not $ Prelude.null t)
+  from other = value other >>= from
+
+instance ValueConvertible NullaryFn where
+  into = Nullary
+  from (Nullary n) = pure $ n
   from other = value other >>= from
 
 instance ValueConvertible String where
-  into = Nullary . Text
+  into = Nullary . Literal . Text
 
-  from (Nullary (Null)) = pure "null"
-  from (Nullary (Bool b)) = pure $ show b
-  from (Nullary (Num n)) = pure $ show n
-  from (Nullary (Text t)) = pure t
+  from (Nullary (Literal (Null))) = pure "null"
+  from (Nullary (Literal (Bool b))) = pure $ show b
+  from (Nullary (Literal (Num n))) = pure $ show n
+  from (Nullary (Literal (Text t))) = pure t
   from other = value other >>= from
 
 instance ValueConvertible Integer where
-  into = Nullary . Num
+  into = Nullary . Literal . Num
 
-  from (Nullary (Null)) = pure 0
-  from (Nullary (Bool b)) = pure $ if b then 1 else 0
-  from (Nullary (Num n)) = pure n
-  from (Nullary (Text t)) = pure $ read t -- this will crash if `t` is invalid.
+  from (Nullary (Literal (Null))) = pure 0
+  from (Nullary (Literal (Bool b))) = pure $ if b then 1 else 0
+  from (Nullary (Literal (Num n))) = pure n
+  from (Nullary (Literal (Text t))) = pure $ read t -- will crash if `t` is invalid.
   from other = value other >>= from
 
-
 nullValue :: Value
-nullValue = Nullary Null
+nullValue = Nullary $ Literal Null
 
-literal :: Literal -> Evaluator
-literal (Variable var) = EvaluatorM $ \env ->
-  pure (env, fromMaybe nullValue (env !? var))
-literal lit = pure $ Nullary lit
+fetchVariable :: String -> Env -> Value
+fetchVariable var env = fromMaybe nullValue (env !? var)
+
+nullary :: NullaryFn -> EvaluatorM Value
+nullary (Variable var) = EvaluatorM $ \env ->
+  pure (env, Right $ fetchVariable var env)
+nullary (Literal lit) = pure $ Nullary $ Literal lit
+nullary (Prompt) = liftIO $ into <$> getLine
 
 unary :: UnaryFn -> Value -> Evaluator
 unary Not x = into . not <$> from x
@@ -67,66 +73,81 @@ unary FnDef x = pure x
 unary Call x = value x >>= value
 unary Output x = do
   text <- from @String x
-  liftIO $ print text
-  pure nullValue
-unary Prompt x = do
-  text <- from @String x
-  liftIO $ print text
-  line <- liftIO $ getLine
-  pure $ into line
+  liftIO $ nullValue <$
+    if not (Prelude.null text) && (last text) == '\\'
+      then putStr $ init text 
+      else putStrLn text
 unary Quit x = do
   exitCode <- from x
-  liftIO $ exitWith $ case exitCode of
-    0 -> ExitSuccess
-    other -> ExitFailure $ fromInteger other
+  liftIO $ exitWith $
+    if exitCode == 0
+      then ExitSuccess
+      else ExitFailure $ fromInteger exitCode
 unary Eval x = do
   code <- from x
-  pure $ fromMaybe nullValue (snd $ parse Knight.Parse.value code)
+  let result = snd $ parse Knight.Parse.value code
+  pure $ fromMaybe nullValue result
 unary System x = do
   cmd <- from x
   let proc = (shell cmd){std_out=CreatePipe}
-  (_, stdout, _, ph) <- liftIO $ createProcess proc
+  (_, stdout, _, _) <- liftIO $ createProcess proc
   case stdout of
     Just s -> liftIO $ into <$> hGetContents s
     Nothing -> pure nullValue
-
-
-binaryFn :: ValueConvertible a => (a -> a -> a) -> Value -> Value -> Evaluator
-binaryFn f l r = do
-  l' <- from l
-  r' <- from r
-  pure $ into $ f l' r'
 
 binary :: BinaryFn -> Value -> Value -> Evaluator
 -- binary Random start stop = do
 --   start' <- from start
 --   stop' <- from stop
---   pure $ Nullary $ Num $ randomR (start' stop')
+--   error "todo: random" 
+--   -- pure $ Nullary $ Num $ randomR (start' stop') 
 binary While cond body = 
     loop
   where
     loop = do
-      cond' <- from (trace ("cond:" ++ show cond) cond)
-      if trace ("cond':" ++ show cond') cond'
+      cond' <- from cond
+      if cond'
         then value body *> loop
         else pure $ nullValue
 binary Endl lhs rhs = value lhs *> value rhs
 binary Assign (Nullary (Variable var)) contents = EvaluatorM $ \env -> do
   (env', contents') <- liftIO $ eval (value contents) env
-  pure (insert var contents' env', contents')
-binary Add l@(Nullary (Text _)) r = binaryFn @String (++) l r 
-binary Add l r = binaryFn @Integer (+) l r
-binary Sub l r = binaryFn @Integer (-) l r
-binary Mul l r = binaryFn @Integer (*) l r
-binary Div l r = binaryFn @Integer div l r
-binary Mod l r = binaryFn @Integer mod l r
-binary Pow l r = binaryFn @Integer (^) l r
-binary Lth l r = binaryFn @Bool (<) l r
-binary Gth l r = binaryFn @Bool (>) l r
-binary And l r = binaryFn @Bool (&&) l r
-binary Or l r = binaryFn @Bool (||) l r
-binary bin l r = error ("bad arguments given to " ++
-    show bin ++ ": " ++ show l ++ ", " ++ show r)
+  case contents' of
+    Left l -> pure (env', Left l)
+    Right r -> pure $ (insert var r env', Right r)
+binary op lv rv = value lv >>= getLiteral >>= (go op)
+  where
+    go Add (Num l) = into . (l +) <$> from rv
+    go Add (Text l) = into . (l ++) <$> from rv
+    go Sub (Num l) = into . (l -) <$> from rv
+    go Mul (Num l) = into . (l *) <$> from rv
+    go Div (Num l) = do
+      r <- from rv
+      if r == 0
+        then runtimeError "divide by zero"
+        else pure $ into $ l `div` r
+    go Mod (Num l) = into . (l `mod`) <$> from rv
+    go Pow (Num l) = into . (l ^) <$> from @Integer rv
+    go Lth (Num l) = into . (l <) <$> from rv
+    go Lth (Text l) = into . (l <) <$> from rv
+    go Gth (Num l) = into . (l >) <$> from rv
+    go Gth (Text l) = into . (l >) <$> from rv
+    go And _ = do
+      l <- from lv
+      r <- from rv
+      pure $ into $ l && r
+    go Or _ = do
+      l <- from lv
+      r <- from rv
+      pure $ into $ l || r
+    go op l = runtimeError $ "invalid " ++ show op ++ " operand: " ++ show l
+
+runtimeError :: String -> EvaluatorM a
+runtimeError err = EvaluatorM $ \env -> pure $ (env, Left err)
+
+getLiteral :: Value -> EvaluatorM Literal
+getLiteral (Nullary (Literal lit )) = pure lit
+getLiteral other = value other >>= getLiteral
 
 ternary :: TernaryFn -> Value -> Value -> Value -> Evaluator
 ternary If cond true false = do
@@ -134,7 +155,7 @@ ternary If cond true false = do
   value $ if cond' then true else false
 
 value :: Value -> Evaluator
-value (Nullary n) = literal n
+value (Nullary x) = nullary x
 value (Unary f x) = unary f x
 value (Binary f x y) = binary f x y
 value (Ternary f x y z) = ternary f x y z
