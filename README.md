@@ -40,7 +40,6 @@ unary
 	:= `F` | `FNDEF`
 	 | `C` | `CALL`
 	 | `O` | `OUTPUT`
-	 | `P` | `PROMPT`
 	 | `Q` | `QUIT`
 	 | `E` | `EVAL`
 	 | `S` | `SYSTEM`
