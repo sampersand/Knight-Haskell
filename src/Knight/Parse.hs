@@ -40,8 +40,8 @@ literal = asum
 --
 -- If `a` is only a single character, that will be the only thing that's parsed.
 named :: a -> String -> Parser a
-named t text@(c:[]) = t <$ void (char c)
-named t text@(c:_) = t <$ (void (char c) <|> void (string text))
+named t (c:[]) = t <$ void (char c)
+named t text@(c:_) = t <$ (void (string text) <|> void (char c))
 
 nullary :: Parser NullaryFn
 nullary = asum 

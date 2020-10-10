@@ -20,7 +20,7 @@ OUTPUT (+ 'tries: ' nguess)                   # print("tries: " + n)
 ## Syntax
 ```
 expr
-	:= primary
+	:= nullary
 	| unary expr
 	| binary expr expr
 	| ternary expr expr expr
@@ -28,9 +28,13 @@ expr
 primary
 	:= `null`
 	| `true` | `false`
-	| [a-z_][a-z_0-9]*
 	| [0-9]+
 	| `'` [^']* `'` | `"` [^"]* `"`
+
+nullary 
+	:= primary
+	| 'P' | 'PROMPT'
+	| [a-z_][a-z_0-9]*
 
 unary
 	:= `F` | `FNDEF`
