@@ -11,16 +11,15 @@ import qualified Data.Map
 
 main = do
   let
-    Just code = snd $ parse Knight.Parse.value "O3"
---     Just code = snd $ parse Knight.Parse.value ("\
--- \ ; = fact F \
---   \ I (< x 1) \
---     \ 1 \
---     \ ; = x (- x 1) \
---       \ * (+ 1 x) (C fact) \
--- \ ; = x 10 \
--- \ O C fact \
---       \" )
+    Just code = snd $ parse Knight.Parse.value ("\
+\ ; = fact F \
+  \ I (< x 1) \
+    \ 1 \
+    \ ; = x (- x 1) \
+      \ * (+ 1 x) (C fact) \
+\ ; = x 10 \
+\ O C fact \
+      \" )
     env = Data.Map.empty :: Env
 
   eval (Knight.Evaluate.value code) env
