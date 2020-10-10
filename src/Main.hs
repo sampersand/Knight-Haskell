@@ -17,7 +17,7 @@ main = do
       \ ; W (> n 1) \
       \   ; O n \
       \     = n - n 1 \
-      \ O ne \ 
+      \ O n \ 
       \" )
     -- Just code = snd $ parse Knight.Parse.value ("\
     --   \ ; = a 0 \
